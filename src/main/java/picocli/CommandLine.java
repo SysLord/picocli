@@ -38,7 +38,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
-
+import java.util.stream.Collectors;
 import picocli.CommandLine.Help.Ansi.IStyle;
 import picocli.CommandLine.Help.Ansi.Style;
 import picocli.CommandLine.Help.Ansi.Text;
@@ -1540,20 +1540,9 @@ public class CommandLine {
         return usage(new StringBuilder(), helpFactory().create(getCommandSpec(), colorScheme)).toString();
     }
     private static StringBuilder usage(StringBuilder sb, Help help) {
-        return sb.append(help.headerHeading())
-                .append(help.header())
-                .append(help.synopsisHeading())      //e.g. Usage:
-                .append(help.synopsis(help.synopsisHeadingLength())) //e.g. &lt;main class&gt; [OPTIONS] &lt;command&gt; [COMMAND-OPTIONS] [ARGUMENTS]
-                .append(help.descriptionHeading())   //e.g. %nDescription:%n%n
-                .append(help.description())          //e.g. {"Converts foos to bars.", "Use options to control conversion mode."}
-                .append(help.parameterListHeading()) //e.g. %nPositional parameters:%n%n
-                .append(help.parameterList())        //e.g. [FILE...] the files to convert
-                .append(help.optionListHeading())    //e.g. %nOptions:%n%n
-                .append(help.optionList())           //e.g. -h, --help   displays this help and exits
-                .append(help.commandListHeading())   //e.g. %nCommands:%n%n
-                .append(help.commandList())          //e.g.    add       adds the frup to the frooble
-                .append(help.footerHeading())
-                .append(help.footer());
+    	return help.sections().stream()
+    			.map(it -> it.render())
+    			.collect(() -> sb, StringBuilder::append, StringBuilder::append);
     }
 
     /**
@@ -7954,6 +7943,11 @@ public class CommandLine {
         void init(CommandLine helpCommandLine, Help.Ansi ansi, PrintStream out, PrintStream err);
     }
 
+    
+    public interface IHelpSectionRenderer {
+    	String render();
+    }
+    
     /**
      * A collection of methods and inner classes that provide fine-grained control over the contents and layout of
      * the usage help message to display to end users when help is requested or invalid input values were specified.
@@ -8059,6 +8053,25 @@ public class CommandLine {
          * may need to re-initialize this field by calling {@link #createDefaultParamLabelRenderer()} again. */
         public IParamLabelRenderer parameterLabelRenderer() {return parameterLabelRenderer;}
 
+        List<IHelpSectionRenderer> sections() {
+        	return Arrays.asList(
+    	        () -> headerHeading(),
+    	        () -> header(),
+    	        () -> synopsisHeading(),      			 //e.g. Usage:
+    	        () -> synopsis(synopsisHeadingLength()), //e.g. &lt;main class&gt; [OPTIONS] &lt;command&gt; [COMMAND-OPTIONS] [ARGUMENTS]
+    	        () -> descriptionHeading(),   			 //e.g. %nDescription:%n%n
+    	        () -> description(),          			 //e.g. {"Converts foos to bars.", "Use options to control conversion mode."}
+    	        () -> parameterListHeading(), 			 //e.g. %nPositional parameters:%n%n
+    	        () -> parameterList(),        			 //e.g. [FILE...] the files to convert
+    	        () -> optionListHeading(),    			 //e.g. %nOptions:%n%n
+    	        () -> optionList(),           			 //e.g. -h, --help   displays this help and exits
+    	        () -> commandListHeading(),   			 //e.g. %nCommands:%n%n
+    	        () -> commandList(),          			 //e.g.    add       adds the frup to the frooble
+    	        () -> footerHeading(),
+    	        () -> footer()
+    	    );
+        }
+        
         /** Registers all specified subcommands with this Help.
          * @param commands maps the command names to the associated CommandLine object
          * @return this Help instance (for method chaining)
